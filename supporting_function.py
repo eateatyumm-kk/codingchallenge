@@ -19,13 +19,6 @@ def calc_E_e(lattice, J=1.0, h=0.0):
     e = E/lattice.size
     return E, e
 
-
-"""
-
-
-
-"""
-
 # calculate the total magnetism (M) and magnetization per spin (m)
 def calc_M_m(lattice):
     M = np.sum(lattice)

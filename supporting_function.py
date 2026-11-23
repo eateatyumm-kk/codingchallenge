@@ -1,13 +1,19 @@
 import numpy as np
 
 #create LxL matrix
-def make_lattice (L, mode = "random"):
+def make_lattice (L, mode = "random", rng=None):
     if mode == "random":
-        lattice = np.random.choice([-1,1], size=(L,L))
+        if rng is None:
+            lattice = np.random.choice([-1,1], size=(L,L))
+        else:
+            lattice = rng.choice([-1,1], size=(L,L))
     elif mode == "up":
         lattice = np.ones((L, L), dtype=int)
     elif mode == "down":
         lattice = -np.ones((L, L), dtype=int)
+    elif mode == "alternating":
+        i, j = np.indices((L, L))
+        lattice = np.where((i + j) % 2 == 0, 1, -1)
     return lattice
 
 # calculate the total energy (E) and energy per spin (e) of the given lattice
@@ -39,11 +45,12 @@ def calc_flip_E (lattice, i, j, J=1.0, h=0.0):
     return E_flip
 
 # sweep function to perform the Monte Carlo simulation
-def run_sweep(s, T, num_sweeps, J=1.0, h=0.0):
+def run_sweep(s, T, num_sweeps, J=1.0, h=0.0, rng=None):
 
+    if rng is None:
+        rng = np.random.default_rng()
+    
     L = s.shape[0]  
-
-    sweep = [0]
     plots_m = []
     plots_e = []
 
@@ -52,23 +59,20 @@ def run_sweep(s, T, num_sweeps, J=1.0, h=0.0):
     plots_e.append(e0)
     plots_m.append(m0)
 
-    for i in range(num_sweeps):
+    for _ in range(num_sweeps):
         for r in range(L):
             for c in range(L):
 
                 E_flip = calc_flip_E(s, r, c, J, h)
-                if E_flip < 0:
-                    s[r,c] *= -1
-                elif E_flip >= 0:
-                    p = np.exp(-E_flip/(T))
-                    if np.random.rand() < p:
-                        s[r,c] *= -1
+                if E_flip <= 0:
+                    s[r, c] *= -1
+                elif rng.random() <= np.exp(-E_flip / T):
+                    s[r, c] *= -1
 
         _, test_e = calc_E_e(s, J, h)
         _, test_m = calc_M_m(s)   
-        
-        sweep.append(i+1)
+    
         plots_m.append(test_m)
         plots_e.append(test_e)
 
-    return s, sweep, plots_m, plots_e
+    return s, plots_m, plots_e
